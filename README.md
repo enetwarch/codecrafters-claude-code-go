@@ -1,6 +1,6 @@
 # Golaude
 
-**Golaude** is a high-performance, CLI-based AI coding assistant built in Go. It implements a fully autonomous **Agent Loop** that allows an LLM to interact directly with your local file system and terminal through OpenAI-compatible tool calling. This project was built following the [**CodeCrafters "Build Your Own Claude Code" Challenge**](https://app.codecrafters.io/courses/claude-code/overview) and served as a deep dive into tool-assisted LLM reasoning, Go's os/exec and filesystem primitives, and stateless API design.
+**Golaude** is a high-performance, CLI-based AI coding assistant built in Go. It implements a fully autonomous **Agent Loop** that allows an LLM to interact directly with your local file system and terminal through OpenAI-compatible tool calling. This project was built following the [**CodeCrafters "Build your own Claude Code" course**](https://app.codecrafters.io/courses/claude-code/overview) and served as a deep dive into tool-assisted LLM reasoning, Go's os/exec and filesystem primitives, and stateless API design.
 
 [![progress-banner](https://backend.codecrafters.io/progress/claude-code/efd74af4-bc4b-479f-b9cb-b51c4a9ba843)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
 
