@@ -29,6 +29,7 @@ func main() {
 	}
 	ctx := context.Background()
 
+	model := "anthropic/claude-haiku-4.5"
 	messages := []openai.ChatCompletionMessageParamUnion{openai.UserMessage(prompt)}
 	tools := []openai.ChatCompletionToolUnionParam{
 		openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
@@ -38,10 +39,28 @@ func main() {
 				"type": "object",
 				"properties": map[string]any{
 					"file_path": map[string]string{
-						"type": "string",
+						"type":        "string",
+						"description": "The path of the file to read",
 					},
 				},
 				"required": []string{"file_path"},
+			},
+		}),
+		openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+			Name:        "Write",
+			Description: openai.String("Write content to a file"),
+			Parameters: openai.FunctionParameters{
+				"type": "object",
+				"properties": map[string]any{
+					"file_path": map[string]string{
+						"type":        "string",
+						"description": "The path of the file to write to",
+					},
+					"content": map[string]string{
+						"type":        "string",
+						"description": "The content to write to the file",
+					},
+				},
 			},
 		}),
 	}
@@ -49,11 +68,8 @@ func main() {
 	var resp *openai.ChatCompletion
 	var err error
 	client := openai.NewClient(option.WithAPIKey(apiKey), option.WithBaseURL(baseURL))
-	resp, err = client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-		Model:    "anthropic/claude-haiku-4.5",
-		Messages: messages,
-		Tools:    tools,
-	})
+	resp, err = client.Chat.Completions.New(ctx,
+		openai.ChatCompletionNewParams{Model: model, Messages: messages, Tools: tools})
 	if err != nil {
 		panic(err)
 	}
@@ -65,12 +81,13 @@ func main() {
 	// fmt.Fprintln(os.Stderr, "Logs from your program will appear here!")
 
 	for {
-		assistantMessage := resp.Choices[0].Message
-		messages = append(messages, assistantMessage.ToParam())
+		assistantMsg := resp.Choices[0].Message
+		messages = append(messages, assistantMsg.ToParam())
 
-		if len(assistantMessage.ToolCalls) > 0 {
-			toolCall := assistantMessage.ToolCalls[0]
-			if toolCall.Function.Name == "Read" {
+		if len(assistantMsg.ToolCalls) > 0 {
+			toolCall := assistantMsg.ToolCalls[0]
+			switch toolCall.Function.Name {
+			case "Read":
 				var args struct {
 					FilePath string `json:"file_path"`
 				}
@@ -80,18 +97,27 @@ func main() {
 					panic(err)
 				}
 				messages = append(messages, openai.ToolMessage(string(content), toolCall.ID))
+
+			case "Write":
+				var args struct {
+					FilePath string `json:"file_path"`
+					Content  string `json:"content"`
+				}
+				json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
+				err = os.WriteFile(args.FilePath, []byte(args.Content), 0666)
+				if err != nil {
+					panic(err)
+				}
+				messages = append(messages, openai.ToolMessage("Writing success", toolCall.ID))
 			}
 
-			resp, err = client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
-				Model:    "anthropic/claude-haiku-4.5",
-				Messages: messages,
-				Tools:    tools,
-			})
+			resp, err = client.Chat.Completions.New(ctx,
+				openai.ChatCompletionNewParams{Model: model, Messages: messages, Tools: tools})
 			if err != nil {
 				panic(err)
 			}
 		} else {
-			fmt.Print(assistantMessage.Content)
+			fmt.Print(assistantMsg.Content)
 			break
 		}
 	}
