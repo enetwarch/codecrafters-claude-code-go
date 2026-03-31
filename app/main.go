@@ -14,7 +14,6 @@ func main() {
 	var prompt string
 	flag.StringVar(&prompt, "p", "", "Prompt to send to LLM")
 	flag.Parse()
-
 	if prompt == "" {
 		panic("Prompt must not be empty")
 	}
@@ -24,7 +23,6 @@ func main() {
 	if baseURL == "" {
 		baseURL = "https://openrouter.ai/api/v1"
 	}
-
 	if apiKey == "" {
 		panic("Env variable OPENROUTER_API_KEY not found")
 	}
@@ -41,6 +39,21 @@ func main() {
 						},
 					},
 				},
+			},
+			Tools: []openai.ChatCompletionToolUnionParam{
+				openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+					Name:        "Read",
+					Description: openai.String("Read and return the contents of a file"),
+					Parameters: openai.FunctionParameters{
+						"type": "object",
+						"properties": map[string]interface{}{
+							"file_path": map[string]string{
+								"type": "string",
+							},
+						},
+						"required": []string{"file_path"},
+					},
+				}),
 			},
 		},
 	)
