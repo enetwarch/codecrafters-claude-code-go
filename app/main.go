@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/openai/openai-go/v3"
 	"github.com/openai/openai-go/v3/option"
@@ -61,6 +62,21 @@ func main() {
 						"description": "The content to write to the file",
 					},
 				},
+				"required": []string{"file_path", "content"},
+			},
+		}),
+		openai.ChatCompletionFunctionTool(openai.FunctionDefinitionParam{
+			Name:        "Bash",
+			Description: openai.String("Execute a shell command"),
+			Parameters: openai.FunctionParameters{
+				"type": "object",
+				"properties": map[string]any{
+					"command": map[string]string{
+						"type":        "string",
+						"description": "The command to execute",
+					},
+				},
+				"required": []string{"command"},
 			},
 		}),
 	}
@@ -108,7 +124,19 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
-				messages = append(messages, openai.ToolMessage("Writing success", toolCall.ID))
+				messages = append(messages, openai.ToolMessage("Writing successful!", toolCall.ID))
+
+			case "Bash":
+				var args struct {
+					Command string `json:"command"`
+				}
+				json.Unmarshal([]byte(toolCall.Function.Arguments), &args)
+				cmd := exec.Command("sh", "-c", args.Command)
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					panic(err)
+				}
+				messages = append(messages, openai.ToolMessage(string(output), toolCall.ID))
 			}
 
 			resp, err = client.Chat.Completions.New(ctx,
